@@ -60,6 +60,11 @@ app.delete('/api/contacts/:id', async (req, res) => {
   }
 });
 
+// 5. check service rurring
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'Service is running smoothly!' });
+});
+
 // Server Initialization
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running smoothly on port ${PORT}`));
