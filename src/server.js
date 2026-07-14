@@ -13,6 +13,8 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB successfully!'))
   .catch(err => console.error('Database connection error:', err));
 
+  console.log("MONGO_URI:", process.env.MONGO_URI);
+
 // 1. CREATE: Add a new contact
 app.post('/api/contacts', async (req, res) => {
   try {
