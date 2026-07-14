@@ -62,7 +62,7 @@ app.delete('/api/contacts/:id', async (req, res) => {
 
 // 5. check service rurring
 app.get('/', (req, res) => {
-  res.status(200).json({ message: 'Service is running smoothly!' });
+  res.status(200).json({ message: 'Service is running smoothly!.....' });
 });
 
 // Server Initialization
