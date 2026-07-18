@@ -1,72 +1,224 @@
 // server.js
-const express = require('express');
-const mongoose = require('mongoose');
-require('dotenv').config();
 
-const Contact = require('./models/Contact');
+const express = require("express");
+const mongoose = require("mongoose");
+require("dotenv").config();
+
+const Contact = require("./models/Contact");
 
 const app = express();
-app.use(express.json()); // Allows the server to parse JSON payloads
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('Connected to MongoDB successfully!'))
-  .catch(err => console.error('Database connection error:', err));
+app.use(express.json());
 
-  console.log("MONGO_URI:", process.env.MONGO_URI);
-
-// 1. CREATE: Add a new contact
-app.post('/api/contacts', async (req, res) => {
-  try {
-    const newContact = new Contact(req.body);
-    const savedContact = await newContact.save();
-    res.status(201).json(savedContact);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// 2. READ: Get all contacts (Sorted alphabetically from A to Z)
-app.get('/api/contacts', async (req, res) => {
-  try {
-    const contacts = await Contact.find().sort({ name: 1 });
-    res.status(200).json(contacts);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 3. UPDATE: Modify a contact's details by ID
-app.put('/api/contacts/:id', async (req, res) => {
-  try {
-    const updatedContact = await Contact.findByIdAndUpdate(
-      req.params.id, 
-      req.body, 
-      { new: true, runValidators: true } // "runValidators" ensures updates still pass the 10-digit phone rule
-    );
-    if (!updatedContact) return res.status(404).json({ error: 'Contact not found' });
-    res.status(200).json(updatedContact);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// 4. DELETE: Remove a contact by ID
-app.delete('/api/contacts/:id', async (req, res) => {
-  try {
-    const deletedContact = await Contact.findByIdAndDelete(req.params.id);
-    if (!deletedContact) return res.status(404).json({ error: 'Contact not found' });
-    res.status(200).json({ message: 'Contact successfully deleted' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 5. check service rurring
-app.get('/', (req, res) => {
-  res.status(200).json({ message: 'Service is running smoothly!.....' });
-});
-
-// Server Initialization
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running smoothly on port ${PORT}`));
+
+/**
+ * MongoDB Connection
+ */
+async function connectDB() {
+  try {
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI is not defined in environment variables.");
+    }
+
+    console.log("====================================");
+    console.log("Connecting to MongoDB...");
+    console.log(
+      "MONGO_URI:",
+      process.env.MONGO_URI.replace(
+        /(mongodb\+srv:\/\/)(.*):(.*)@/,
+        "$1****:****@"
+      )
+    );
+    console.log("====================================");
+
+    await mongoose.connect(process.env.MONGO_URI);
+
+    console.log("MongoDB Connected Successfully");
+
+    await mongoose.connection.db.admin().ping();
+
+    console.log("MongoDB Ping Successful");
+  } catch (err) {
+    console.error("MongoDB Connection Failed");
+    console.error(err);
+
+    process.exit(1);
+  }
+}
+
+/**
+ * MongoDB Events
+ */
+
+mongoose.connection.on("connected", () => {
+  console.log("Mongo Event: connected");
+});
+
+mongoose.connection.on("error", (err) => {
+  console.error("Mongo Event: error");
+  console.error(err);
+});
+
+mongoose.connection.on("disconnected", () => {
+  console.log("Mongo Event: disconnected");
+});
+
+/**
+ * Routes
+ */
+
+// Health Check
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Service is running smoothly"
+  });
+});
+
+/**
+ * Create Contact
+ */
+app.post("/api/contacts", async (req, res) => {
+  try {
+    console.log("Incoming Data:", req.body);
+
+    const contact = new Contact(req.body);
+
+    console.log("Saving contact...");
+
+    const savedContact = await contact.save();
+
+    console.log("Contact Saved");
+
+    res.status(201).json(savedContact);
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+/**
+ * Get All Contacts
+ */
+app.get("/api/contacts", async (req, res) => {
+  try {
+    const contacts = await Contact.find().sort({
+      name: 1,
+    });
+
+    res.json(contacts);
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+/**
+ * Get Single Contact
+ */
+app.get("/api/contacts/:id", async (req, res) => {
+  try {
+    const contact = await Contact.findById(req.params.id);
+
+    if (!contact) {
+      return res.status(404).json({
+        success: false,
+        message: "Contact not found",
+      });
+    }
+
+    res.json(contact);
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+/**
+ * Update Contact
+ */
+app.put("/api/contacts/:id", async (req, res) => {
+  try {
+    const updated = await Contact.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        message: "Contact not found",
+      });
+    }
+
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+/**
+ * Delete Contact
+ */
+app.delete("/api/contacts/:id", async (req, res) => {
+  try {
+    const deleted = await Contact.findByIdAndDelete(req.params.id);
+
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Contact not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Contact deleted successfully",
+    });
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+/**
+ * Start Server
+ */
+
+async function startServer() {
+  await connectDB();
+
+  app.listen(PORT, () => {
+    console.log("====================================");
+    console.log(`Server Running on Port ${PORT}`);
+    console.log("====================================");
+  });
+}
+
+startServer();
