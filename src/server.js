@@ -23,13 +23,10 @@ async function connectDB() {
 
     console.log("====================================");
     console.log("Connecting to MongoDB...");
-    console.log(
-      "MONGO_URI:",
-      process.env.MONGO_URI.replace(
-        /(mongodb\+srv:\/\/)(.*):(.*)@/,
-        "$1****:****@"
-      )
-    );
+     // Support both plain string and JSON secret
+    if (process.env.MONGO_URI.startsWith("{")) {
+      process.env.MONGO_URI = JSON.parse(process.env.MONGO_URI).MONGO_URI;
+    }
     console.log("====================================");
 
     await mongoose.connect(process.env.MONGO_URI);
